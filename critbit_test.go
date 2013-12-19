@@ -59,7 +59,7 @@ func TestKeyOrder(t *testing.T) {
 			t.Errorf("test %d did not contain %q after insert", i, s)
 		}
 		res := keys(tr)
-		if len(res) != len(test.res) {
+		if len(res) != len(test.res) || tr.Len() != len(test.res) {
 			t.Errorf("test %d unexpected length %d", i, len(res))
 			continue
 		}

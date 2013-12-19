@@ -10,7 +10,8 @@ package critbit
 // This is meant as a reference for custom implementations.
 type Tree struct {
 	// root is either a string key or an internal node
-	root interface{}
+	root   interface{}
+	length int
 }
 
 type node struct {
@@ -18,8 +19,13 @@ type node struct {
 	child [2]interface{}
 	// at contains both the byte offset and the inverted critical bit: (nbyte<<8) | ^byte(critbit)
 	// "aa" and "ab" would have the first critical bit in the second byte in the second bit.
-	// with omitting the firest six zero bytes and adding spaces for readability: 0000 0010 1111 1101
+	// with omitting the first six zero bytes and adding spaces for readability: 0000 0010 1111 1101
 	at uint64
+}
+
+// Len returns the number of keys in the tree.
+func (t *Tree) Len() int {
+	return t.length
 }
 
 // Contains returns whether the tree contains the key.
@@ -52,6 +58,7 @@ func (t *Tree) Insert(key string) bool {
 	// test for empty tree
 	if t.root == nil {
 		t.root = key
+		t.length++
 		return true
 	}
 	// walk for best member
@@ -125,6 +132,7 @@ ByteFound:
 	}
 	nn.child[ndir] = *wp
 	*wp = nn
+	t.length++
 	return true
 }
 
@@ -157,6 +165,7 @@ func (t *Tree) Delete(key string) bool {
 		return false
 	}
 	// delete from tree
+	t.length--
 	if wp == nil {
 		t.root = nil
 		return true
