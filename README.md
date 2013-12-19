@@ -13,17 +13,38 @@ This package is BSD licensed, Copyright (c) 2013 Martin Schnabel
 
 Benchmark
 ---------
-Benchmark against map[string]struct{} on an i5-2400.
+Benchmark against map[string]struct{} on an i5-2400 with Go 1.2.
 
 The first benchmark checks simple key insertion and checks.
 
-	BenchmarkMap		   10000	    103719 ns/op	    5065 B/op	      10 allocs/op
-	BenchmarkTree		   10000	    174412 ns/op	    5193 B/op	      81 allocs/op
+	BenchmarkMap		   10000	    101667 ns/op	    5064 B/op	      10 allocs/op
+	BenchmarkTree		   10000	    128732 ns/op	    5192 B/op	      81 allocs/op
 
 The second one assummes you want distinct and sorted keys. The tree is already sorted. The map uses the sort package.
 
-	BenchmarkMapSort	   20000	     94981 ns/op	    6401 B/op	      12 allocs/op
-	BenchmarkTreeSort	   10000	    112375 ns/op	    6494 B/op	      82 allocs/op
+	BenchmarkMapSort	   20000	     92145 ns/op	    6403 B/op	      12 allocs/op
+	BenchmarkTreeSort	   20000	     84976 ns/op	    6494 B/op	      82 allocs/op
 
-In both cases the map approach is faster, that demonstrates how awesome the go standard library is.
-The tree might still be faster than a map if you need a constantly sorted set of keys.
+
+In the second case the tree approach is now faster, that demonstrates the strength of the critbit tree.
+This shows the applicability of the critbit tree whenever you need a sorted set or map.
+Not to mention the ability to do fast prefix iteration which would be even more difficult with the standard map.
+
+This is a big improvement over the last commit. The important change was to use a condition for the critbit test
+instead of an arithmetic solution. Although the stand-alone benchmark does favor the latter.
+
+Now the tree uses:
+
+	//BenchmarkBitCond	  500000	      3181 ns/op
+	var dir byte
+	if byteToCheck&^invertedBit != 0 {
+		dir++
+	}
+
+instead of (even if a benchmark indicates otherwise):
+
+	//BenchmarkBitArith	 1000000	      2864 ns/op
+	dir := (1 + uint32(byteToCheck|invertedBit)) >> 8
+
+Another minor improvement was that whenever the key is shorter than the node to test,
+the `byteToCheck` must be 0 and thus we already know the direction.

@@ -9,7 +9,6 @@ package critbit
 // Tree represents a string set.
 // This is meant as a reference for custom implementations.
 type Tree struct {
-	// root is either a string key or an internal node
 	root   *ref
 	length int
 }
@@ -21,7 +20,6 @@ type ref struct {
 }
 
 type node struct {
-	// children are either string keys or internal nodes
 	child [2]ref
 	// at contains both the byte offset and the inverted critical bit: (nbyte<<8) | ^byte(critbit)
 	// "aa" and "ab" would have the first critical bit in the second byte in the second bit.
@@ -44,11 +42,11 @@ func (t *Tree) Contains(key string) bool {
 	p := *t.root
 	for p.node != nil {
 		// calculate direction
-		var c byte
-		if b := p.node.at >> 8; b < uint64(len(key)) {
-			c = key[b]
+		var dir byte
+		b := p.node.at >> 8
+		if b < uint64(len(key)) && key[b]&^byte(p.node.at) != 0 {
+			dir++
 		}
-		dir := (1 + uint32(c|byte(p.node.at))) >> 8
 		// try next node
 		p = p.node.child[dir]
 	}
@@ -69,18 +67,17 @@ func (t *Tree) Insert(key string) bool {
 	p := *t.root
 	for p.node != nil {
 		// calculate direction
-		var c byte
-		if b := p.node.at >> 8; b < uint64(len(key)) {
-			c = key[b]
+		var dir byte
+		b := p.node.at >> 8
+		if b < uint64(len(key)) && key[b]&^byte(p.node.at) != 0 {
+			dir++
 		}
-		dir := (1 + uint32(c|byte(p.node.at))) >> 8
 		// try next node
 		p = p.node.child[dir]
 	}
 	// find critical bit
 	var nbyte int
-	var bits byte
-	var c byte
+	var c, bits byte
 	// find differing byte
 	for nbyte = 0; nbyte < len(key); nbyte++ {
 		if c = 0; nbyte < len(p.string) {
@@ -103,7 +100,10 @@ ByteFound:
 	bits |= bits >> 2
 	bits |= bits >> 4
 	bits = ^(bits &^ (bits >> 1))
-	ndir := (1 + uint32(c|bits)) >> 8
+	var ndir byte
+	if c&^bits != 0 {
+		ndir++
+	}
 	// insert new node
 	nn := &node{at: (uint64(nbyte) << 8) | uint64(bits)}
 	nn.child[1-ndir].string = key
@@ -115,18 +115,14 @@ ByteFound:
 			break
 		}
 		b := p.node.at >> 8
-		if b > uint64(nbyte) {
-			break
-		}
-		if b == uint64(nbyte) && byte(p.node.at) > bits {
+		if b > uint64(nbyte) || b == uint64(nbyte) && byte(p.node.at) > bits {
 			break
 		}
 		// calculate direction
-		var c byte
-		if b < uint64(len(key)) {
-			c = key[b]
+		var dir byte
+		if b < uint64(len(key)) && key[b]&^byte(p.node.at) != 0 {
+			dir++
 		}
-		dir := (1 + uint32(c|byte(p.node.at))) >> 8
 		// try next node
 		wp = &p.node.child[dir]
 	}
@@ -151,11 +147,11 @@ func (t *Tree) Delete(key string) bool {
 	for n != nil {
 		wp = p
 		// calculate direction
-		var c byte
-		if b := n.at >> 8; b < uint64(len(key)) {
-			c = key[b]
+		var dir byte
+		b := p.node.at >> 8
+		if b < uint64(len(key)) && key[b]&^byte(p.node.at) != 0 {
+			dir++
 		}
-		dir = (1 + uint32(c|byte(n.at))) >> 8
 		// try next node
 		p = &n.child[dir]
 		n = (*p).node
@@ -191,12 +187,11 @@ func (t *Tree) Iterate(prefix string, handler func(key string) bool) bool {
 	p, top := *t.root, *t.root
 	for p.node != nil {
 		// calculate direction
-		var c byte
+		var dir byte
 		b := p.node.at >> 8
-		if b < uint64(len(prefix)) {
-			c = prefix[b]
+		if b < uint64(len(prefix)) && prefix[b]&^byte(p.node.at) != 0 {
+			dir++
 		}
-		dir := (1 + uint32(c|byte(p.node.at))) >> 8
 		// try next node
 		p = p.node.child[dir]
 		if b < uint64(len(prefix)) {
