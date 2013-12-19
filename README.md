@@ -8,3 +8,5 @@ It is based on Adam Langley's well documented critbit C implementation at https:
 This version is not intended to be used as is (unless you need a simple string set).
 Instead just copy and modify it according to your needs.
 You can change it to use other types of keys or use it as a map.
+
+This package is BSD licensed, Copyright (c) 2013 Martin Schnabel
