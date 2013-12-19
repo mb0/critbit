@@ -8,6 +8,7 @@ import (
 	"os"
 	"testing"
 	"text/scanner"
+	"sort"
 )
 
 var words, tests []string
@@ -74,5 +75,37 @@ func BenchmarkTree(b *testing.B) {
 				count++
 			}
 		}
+	}
+}
+
+func BenchmarkMapSort(b *testing.B) {
+	initdata(b)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		m := make(map[string]struct{})
+		for _, w := range words {
+			m[w] = struct{}{}
+		}
+		s := make([]string, 0, len(m))
+		for w := range m {
+			s = append(s, w)
+		}
+		sort.Strings(s)
+	}
+}
+
+func BenchmarkTreeSort(b *testing.B) {
+	initdata(b)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		t := new(Tree)
+		for _, w := range words {
+			t.Insert(w)
+		}
+		s := make([]string, 0, t.Len())
+		t.Iterate("", func(key string) bool {
+			s = append(s, key)
+			return true
+		})
 	}
 }
