@@ -140,14 +140,14 @@ func (t *Tree) Delete(key string) bool {
 		return false
 	}
 	// walk for best member
-	var dir uint32
+	var dir byte
 	var wp *ref
 	p := t.root
 	n := (*p).node
 	for n != nil {
 		wp = p
 		// calculate direction
-		var dir byte
+		dir = 0
 		b := p.node.at >> 8
 		if b < uint64(len(key)) && key[b]&^byte(p.node.at) != 0 {
 			dir++

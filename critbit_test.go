@@ -69,8 +69,8 @@ func TestKeyOrder(t *testing.T) {
 			}
 			t.Errorf("test %d unexpected element %q at %d", i, res[j], j)
 		}
-		for j, s := range test.res {
-			if tr.Delete(s) {
+		for j := len(res) - 1; j >= 0; j-- {
+			if tr.Delete(res[j]) {
 				continue
 			}
 			t.Errorf("test %d could not delete %q at %d", i, res[j], j)
