@@ -21,10 +21,18 @@ type ref struct {
 
 type node struct {
 	child [2]ref
-	// at is the offset of the differing byte
-	at int
-	// bits is the inverted byte containing the crit bit
-	bits byte
+	// off is the offset of the differing byte
+	off int
+	// bit contains the single crit bit in the differing byte
+	bit byte
+}
+
+// dir calculates the direction for the given key
+func (n *node) dir(key string) byte {
+	if n.off < len(key) && key[n.off]&n.bit != 0 {
+		return 1
+	}
+	return 0
 }
 
 // Len returns the number of keys in the tree.
@@ -41,13 +49,8 @@ func (t *Tree) Contains(key string) bool {
 	// walk for best member
 	p := *t.root
 	for p.node != nil {
-		// calculate direction
-		var dir byte
-		if p.node.at < len(key) && key[p.node.at]&p.node.bits != 0 {
-			dir++
-		}
 		// try next node
-		p = p.node.child[dir]
+		p = p.node.child[p.node.dir(key)]
 	}
 	// check for membership
 	return key == p.string
@@ -65,60 +68,50 @@ func (t *Tree) Insert(key string) bool {
 	// walk for best member
 	p := *t.root
 	for p.node != nil {
-		// calculate direction
-		var dir byte
-		if p.node.at < len(key) && key[p.node.at]&p.node.bits != 0 {
-			dir++
-		}
 		// try next node
-		p = p.node.child[dir]
+		p = p.node.child[p.node.dir(key)]
 	}
 	// find critical bit
-	var nbyte int
-	var c, bits byte
+	var off int
+	var ch, bit byte
 	// find differing byte
-	for nbyte = 0; nbyte < len(key); nbyte++ {
-		if c = 0; nbyte < len(p.string) {
-			c = p.string[nbyte]
+	for off = 0; off < len(key); off++ {
+		if ch = 0; off < len(p.string) {
+			ch = p.string[off]
 		}
-		if kbits := key[nbyte]; c != kbits {
-			bits = c ^ kbits
+		if keych := key[off]; ch != keych {
+			bit = ch ^ keych
 			goto ByteFound
 		}
 	}
-	if nbyte < len(p.string) {
-		c = p.string[nbyte]
-		bits = c
+	if off < len(p.string) {
+		ch = p.string[off]
+		bit = ch
 		goto ByteFound
 	}
 	return false
 ByteFound:
 	// find differing bit
-	bits |= bits >> 1
-	bits |= bits >> 2
-	bits |= bits >> 4
-	bits = bits &^ (bits >> 1)
+	bit |= bit >> 1
+	bit |= bit >> 2
+	bit |= bit >> 4
+	bit = bit &^ (bit >> 1)
 	var ndir byte
-	if c&bits != 0 {
+	if ch&bit != 0 {
 		ndir++
 	}
 	// insert new node
-	nn := &node{at: nbyte, bits: bits}
+	nn := &node{off: off, bit: bit}
 	nn.child[1-ndir].string = key
 	// walk for best insertion node
 	wp := t.root
 	for wp.node != nil {
 		p = *wp
-		if p.node.at > nbyte || p.node.at == nbyte && p.node.bits < bits {
+		if p.node.off > off || p.node.off == off && p.node.bit < bit {
 			break
 		}
-		// calculate direction
-		var dir byte
-		if p.node.at < len(key) && key[p.node.at]&p.node.bits != 0 {
-			dir++
-		}
 		// try next node
-		wp = &p.node.child[dir]
+		wp = &p.node.child[p.node.dir(key)]
 	}
 	nn.child[ndir] = *wp
 	wp.node = nn
@@ -139,12 +132,8 @@ func (t *Tree) Delete(key string) bool {
 	p := t.root
 	for p.node != nil {
 		wp = p
-		// calculate direction
-		dir = 0
-		if p.node.at < len(key) && key[p.node.at]&p.node.bits != 0 {
-			dir++
-		}
 		// try next node
+		dir = p.node.dir(key)
 		p = &p.node.child[dir]
 	}
 	// check for membership
@@ -176,15 +165,10 @@ func (t *Tree) Iterate(prefix string, handler func(key string) bool) bool {
 	// walk for best member
 	p, top := *t.root, *t.root
 	for p.node != nil {
-		// calculate direction
-		var dir byte
-		at := p.node.at
-		if at < len(prefix) && prefix[at]&p.node.bits != 0 {
-			dir++
-		}
+		newtop := p.node.off < len(prefix)
 		// try next node
-		p = p.node.child[dir]
-		if at < len(prefix) {
+		p = p.node.child[p.node.dir(prefix)]
+		if newtop {
 			top = p
 		}
 	}
