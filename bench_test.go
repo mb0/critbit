@@ -110,30 +110,54 @@ func BenchmarkTreeSort(b *testing.B) {
 	}
 }
 
-var ib = []byte{^byte(1 << 0), ^byte(1 << 1), ^byte(1 << 2), ^byte(1 << 3), ^byte(1 << 4), ^byte(1 << 5), ^byte(1 << 6), ^byte(1 << 7)}
+var ib = []uint{(1 << 0)^0xff, (1 << 1)^0xff, (1 << 2)^0xff, (1 << 3)^0xff, (1 << 4)^0xff, (1 << 5)^0xff, (1 << 6)^0xff, (1 << 7)^0xff}
+var cb = []uint{1 << 0, 1 << 1, 1 << 2, 1 << 3, 1 << 4, 1 << 5, 1 << 6, 1 << 7}
 
-func BenchmarkBitCond(b *testing.B) {
-	var count uint32
+func BenchmarkBitCondInv(b *testing.B) {
+	var count uint
 	for i := 0; i < b.N; i++ {
 		count = 0
 		for j := byte(0); j < 0xff; j++ {
 			for k := 0; k < 8; k++ {
-				if j&^ib[k] != 0 {
+				if j&^byte(ib[k]) != 0 {
 					count++
 				}
 			}
 		}
 	}
+	if count != 1016 {
+		b.Log(count, "!= 1016")
+	}
 }
 
-func BenchmarkBitArith(b *testing.B) {
-	var count uint32
+func BenchmarkBitCond(b *testing.B) {
+	var count uint
 	for i := 0; i < b.N; i++ {
 		count = 0
 		for j := byte(0); j < 0xff; j++ {
 			for k := 0; k < 8; k++ {
-				count += (1 + uint32(j|ib[k])) >> 8
+				if j&byte(cb[k]) != 0 {
+					count++
+				}
 			}
 		}
+	}
+	if count != 1016 {
+		b.Log(count, "!= 1016")
+	}
+}
+
+func BenchmarkBitArith(b *testing.B) {
+	var count uint
+	for i := 0; i < b.N; i++ {
+		count = 0
+		for j := byte(0); j < 0xff; j++ {
+			for k := 0; k < 8; k++ {
+				count += (1 + uint(j|byte(ib[k]))) >> 8
+			}
+		}
+	}
+	if count != 1016 {
+		b.Log(count, "!= 1016")
 	}
 }
