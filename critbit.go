@@ -190,3 +190,56 @@ func iterate(p ref, h func(string) bool) bool {
 	}
 	return h(p.string)
 }
+
+// Keys returns all keys, as a slice of strings, in sorted order.
+func (t *Tree) Keys() []string {
+	keys := make([]string, 0, t.length)
+
+	// empty tree?
+	if t.root == nil {
+		return keys
+	}
+
+	// Walk the tree without function recursion
+	to_visit := make([]*ref, 1)
+
+	// Walk the left side of the root
+	p := t.root
+	to_visit[0] = p
+
+	for len(to_visit) > 0 {
+		// shift the list to get the first item
+		p, to_visit = to_visit[0], to_visit[1:]
+
+		// leaf?
+		if p.node == nil {
+			keys = append(keys, p.string)
+		} else {
+			// unshift the children and continue
+			to_visit = append([]*ref{&p.node.child[0], &p.node.child[1]},
+				to_visit...)
+		}
+	}
+	return keys
+}
+
+// Dump is useful for debugging. It println()'s the entire tree
+func (t *Tree) Dump() {
+	println("Tree length=", t.length)
+	println("Root: off=", t.root.off, "bit=", t.root.bit, "string=", t.root.string)
+	if t.root != nil {
+		t.root.dump("")
+	}
+}
+
+// dump is a helper function for Tree.Dump()
+func (n *node) dump(indent string) {
+	println(indent, "Left:  off=", n.off, "bit=", n.bit, "string=", n.child[0].string)
+	if n.child[0].node != nil {
+		n.child[0].node.dump(indent + "    ")
+	}
+	println(indent, "Right: off=", n.off, "bit=", n.bit, "string=", n.child[1].string)
+	if n.child[1].node != nil {
+		n.child[1].node.dump(indent + "    ")
+	}
+}

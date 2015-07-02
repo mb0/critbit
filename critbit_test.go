@@ -121,3 +121,55 @@ func TestIterate(t *testing.T) {
 		})
 	}
 }
+
+func testStringsEq(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func TestKeys0(t *testing.T) {
+	tr := &Tree{}
+	expected := []string{}
+
+	returned_keys := tr.Keys()
+	if !testStringsEq(returned_keys, expected) {
+		t.Errorf("Got: %q", returned_keys)
+	}
+}
+
+func TestKeys1(t *testing.T) {
+	tr := &Tree{}
+	orig_keys := []string{"aa"}
+	expected := []string{"aa"}
+
+	for _, s := range orig_keys {
+		tr.Insert(s)
+	}
+	returned_keys := tr.Keys()
+	if !testStringsEq(returned_keys, expected) {
+		t.Errorf("Got: %q", returned_keys)
+	}
+}
+
+func TestKeysMany(t *testing.T) {
+	tr := &Tree{}
+	orig_keys := []string{"zz", "dd", "yy", "cc", "xx", "bb", "ww", "aa"}
+	expected := []string{"aa", "bb", "cc", "dd", "ww", "xx", "yy", "zz"}
+
+	for _, s := range orig_keys {
+		tr.Insert(s)
+	}
+	returned_keys := tr.Keys()
+	if !testStringsEq(returned_keys, expected) {
+		t.Errorf("Got: %q", returned_keys)
+	}
+}
