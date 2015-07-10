@@ -271,21 +271,23 @@ func (t *Tree) Copy() *Tree {
 
 // Dump is useful for debugging. It println()'s the entire tree
 func (t *Tree) Dump() {
-	println("Tree length=", t.length)
-	println("Root: off=", t.root.off, "bit=", t.root.bit, "string=", t.root.string)
-	if t.root != nil {
-		t.root.dump("")
-	}
+	println("*Tree length=", t.length)
+        if t.root.node == nil {
+            println(" Root: string=", t.root.string)
+        } else {
+            t.root.dump("Root:", "")
+        }
 }
 
-// dump is a helper function for Tree.Dump()
-func (n *node) dump(indent string) {
-	println(indent, "Left:  off=", n.off, "bit=", n.bit, "string=", n.child[0].string)
-	if n.child[0].node != nil {
-		n.child[0].node.dump(indent + "    ")
-	}
-	println(indent, "Right: off=", n.off, "bit=", n.bit, "string=", n.child[1].string)
-	if n.child[1].node != nil {
-		n.child[1].node.dump(indent + "    ")
-	}
+func (r *ref) dump(title string, indent string) {
+    if r.node == nil {
+        println(indent, title, "String:", r.string)
+    } else {
+        println(indent, title, "String:", r.string, "Offset:", r.off, "Bit:", r.bit)
+    }
+    indent += "  "
+    if r.node != nil {
+        r.child[0].dump("Left", indent)
+        r.child[1].dump("Right", indent)
+    }
 }
