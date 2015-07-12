@@ -202,8 +202,6 @@ func (t *Tree) Keys() []string {
 
 	// Walk the tree without function recursion
 	to_visit := make([]*ref, 1)
-
-	// Walk the left side of the root
 	p := t.root
 	to_visit[0] = p
 
@@ -223,23 +221,73 @@ func (t *Tree) Keys() []string {
 	return keys
 }
 
-// Dump is useful for debugging. It println()'s the entire tree
-func (t *Tree) Dump() {
-	println("Tree length=", t.length)
-	println("Root: off=", t.root.off, "bit=", t.root.bit, "string=", t.root.string)
-	if t.root != nil {
-		t.root.dump("")
+// Copy makes a new deep copy of the tree
+func (t *Tree) Copy() *Tree {
+
+	// Copy a ref, but don't deep-copy into orig.node.child
+	shallow_copy := func(orig *ref) *ref {
+		var nn *node
+		if orig.node != nil {
+			nn = &node{orig.child, orig.off, orig.bit}
+		}
+                // NOTE: if your implementation changes the key to some
+                // allocated value, you may want to deep-copy that key
+                // here and pass its value here to &ref{}.
+		return &ref{orig.string, nn}
 	}
+
+	new_tree := &Tree{}
+	new_tree.root = shallow_copy(t.root)
+	new_tree.length = t.length
+
+	// Walk the tree without function recursion
+	to_visit := make([]*ref, 1)
+	to_visit[0] = new_tree.root
+	var p *ref
+
+	for len(to_visit) > 0 {
+		// shift the list to get the first item
+		p, to_visit = to_visit[0], to_visit[1:]
+
+		// We only need to worry about internal nodes,
+		// not leaf nodes, because we shallow_copy the children
+		// of each ref we visit.
+		if p.node != nil {
+			// Make shallow copies of the children
+			left_copy := shallow_copy(&p.node.child[0])
+			right_copy := shallow_copy(&p.node.child[1])
+
+			// Fix the parent to point to the copies of the children
+			p.node.child[0] = *left_copy
+			p.node.child[1] = *right_copy
+
+			// unshift onto stack, and continue
+			to_visit = append([]*ref{left_copy, right_copy},
+				to_visit...)
+		}
+	}
+	return new_tree
 }
 
-// dump is a helper function for Tree.Dump()
-func (n *node) dump(indent string) {
-	println(indent, "Left:  off=", n.off, "bit=", n.bit, "string=", n.child[0].string)
-	if n.child[0].node != nil {
-		n.child[0].node.dump(indent + "    ")
-	}
-	println(indent, "Right: off=", n.off, "bit=", n.bit, "string=", n.child[1].string)
-	if n.child[1].node != nil {
-		n.child[1].node.dump(indent + "    ")
-	}
+// Dump is useful for debugging. It println()'s the entire tree
+func (t *Tree) Dump() {
+	println("*Tree length=", t.length)
+        if t.root.node == nil {
+            println(" Root: string=", t.root.string)
+        } else {
+            t.root.dump("Root:", "")
+        }
+}
+
+func (r *ref) dump(title string, indent string) {
+    if r.node == nil {
+        println(indent, title, "String:", r.string)
+    } else {
+        println(indent, title, "String:", r.string, "Offset:", r.off, "Bit:", r.bit)
+    }
+    indent += "  "
+    if r.node != nil {
+        r.child[0].dump("Left", indent)
+        r.child[1].dump("Right", indent)
+    }
 }

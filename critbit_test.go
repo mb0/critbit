@@ -173,3 +173,78 @@ func TestKeysMany(t *testing.T) {
 		t.Errorf("Got: %q", returned_keys)
 	}
 }
+
+// Add all refs to the slice, in DFS order
+func get_all_refs(t *Tree) []*ref {
+	all_refs := make([]*ref, 0, t.length*2-1)
+	recurse_refs(t.root, all_refs)
+	return all_refs
+}
+
+func recurse_refs(p *ref, refs []*ref) {
+	refs = append(refs, p)
+	if p.node != nil {
+		recurse_refs(&p.node.child[0], refs)
+		recurse_refs(&p.node.child[1], refs)
+	}
+}
+
+func TestCopy(t *testing.T) {
+	orig_tree := &Tree{}
+	orig_keys := []string{"bb", "dd", "aa", "cc"}
+
+	expected := []string{"aa", "bb", "cc", "dd"}
+
+	for _, s := range orig_keys {
+		orig_tree.Insert(s)
+	}
+	new_tree := orig_tree.Copy()
+
+	// Do they have the same "length" value?
+	if orig_tree.Len() != new_tree.Len() {
+		t.Errorf("New tree has %d keys", new_tree.Len())
+	}
+
+	// Are all the keys the same?
+	new_keys := new_tree.Keys()
+	if !testStringsEq(new_keys, expected) {
+		t.Errorf("Got: %q", new_keys)
+	}
+
+	// Check the number of refs within the tree
+	orig_refs := get_all_refs(orig_tree)
+	new_refs := get_all_refs(new_tree)
+	if len(orig_refs) != len(new_refs) {
+		t.Errorf("Num orig refs: %d, Num new refs: %d", len(orig_refs), len(new_refs))
+	}
+
+	// Check each ref
+	for i := 0; i < len(orig_refs); i++ {
+		// Ensure that all refs were copied (different pointers)
+		if orig_refs[i] == new_refs[i] {
+			t.Errorf("Ref #%d is the same", i)
+		}
+		// Ensure that the old and new refs have the same key
+		if orig_refs[i].string != new_refs[i].string {
+			t.Errorf("Ref #%d orig string=%s new string=%s", i, orig_refs[i].string,
+				new_refs[i].string)
+		}
+		// The refs should both either have nodes or not.
+		if orig_refs[i].node != nil && new_refs[i].node == nil {
+			t.Errorf("Ref %d orig has node, but new does not", i)
+		} else if orig_refs[i].node == nil && new_refs[i].node != nil {
+			t.Errorf("Ref %d orig has no node, but new does", i)
+		}
+		// If there is a node, ensure each node has the same data
+		if orig_refs[i].node != nil {
+			if orig_refs[i].node.off != new_refs[i].node.off {
+				t.Errorf("Ref %d orig off=%d, new off=%d", i, orig_refs[i].node.off,
+					new_refs[i].node.off)
+			}
+			if orig_refs[i].node.bit != new_refs[i].node.bit {
+				t.Errorf("Ref %d orig bit=%d, new bit=%d", i, orig_refs[i].node.bit,
+					new_refs[i].node.bit)
+			}
+		}
+	}
+}
